@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
 import { apiRequest } from "../lib/api";
+import { Store, ShoppingBag, MapPin, Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
 
 export default function Login() {
   const [searchParams] = useSearchParams();
@@ -28,7 +30,7 @@ export default function Login() {
     if (mode === "register") {
       return role === "vendor" ? "Vendor Sign Up" : "Buyer Sign Up";
     }
-    return "Login";
+    return role === "vendor" ? "Vendor Login" : "Buyer Login";
   }, [mode, role]);
 
   const onChange = (key, value) => {
@@ -99,106 +101,164 @@ export default function Login() {
   };
 
   return (
-    <main className="app-shell">
-      <section className="card space-y-4">
-        <h1 className="text-3xl font-black text-soil">{title}</h1>
+    <main className="app-shell justify-center min-h-screen">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style={{ animationDelay: '2s' }} />
 
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            className={role === "vendor" ? "btn-main" : "btn-light"}
-            type="button"
-            onClick={() => setRole("vendor")}
-          >
-            Vendor
-          </button>
-          <button
-            className={role === "buyer" ? "btn-alt" : "btn-light"}
-            type="button"
-            onClick={() => setRole("buyer")}
-          >
-            Buyer
-          </button>
-        </div>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md mx-auto relative z-10"
+      >
+        <Link to="/" className="inline-flex items-center text-slate-500 hover:text-emerald-600 transition-colors mb-6 font-medium">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Home
+        </Link>
 
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            className={mode === "login" ? "btn-main" : "btn-light"}
-            type="button"
-            onClick={() => setMode("login")}
-          >
-            Login
-          </button>
-          <button
-            className={mode === "register" ? "btn-alt" : "btn-light"}
-            type="button"
-            onClick={() => setMode("register")}
-          >
-            Register
-          </button>
-        </div>
+        <div className="card shadow-2xl border-white/60 p-8 relative overflow-hidden">
+          {/* Subtle background pattern */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 pointer-events-none" />
+          
+          <div className="relative z-10">
+            <div className="flex justify-center mb-6">
+              <div className="p-3 bg-emerald-50 rounded-2xl shadow-sm border border-emerald-100">
+                {role === "vendor" ? (
+                  <Store className="w-8 h-8 text-emerald-600" />
+                ) : (
+                  <ShoppingBag className="w-8 h-8 text-amber-500" />
+                )}
+              </div>
+            </div>
 
-        <form className="space-y-3" onSubmit={submit}>
-          {mode === "register" && (
-            <input
-              className="input-box"
-              placeholder="Name"
-              value={form.name}
-              onChange={(e) => onChange("name", e.target.value)}
-              required
-            />
-          )}
+            <h1 className="text-2xl font-bold text-slate-800 text-center mb-8">{title}</h1>
 
-          <input
-            className="input-box"
-            placeholder="Email"
-            type="email"
-            value={form.email}
-            onChange={(e) => onChange("email", e.target.value)}
-            required
-          />
-
-          <input
-            className="input-box"
-            placeholder="Password"
-            type="password"
-            value={form.password}
-            onChange={(e) => onChange("password", e.target.value)}
-            required
-          />
-
-          {mode === "register" && (
-            <>
-              <button type="button" className="btn-light" onClick={useCurrentLocation}>
-                Use My Current Location
+            <div className="bg-slate-100/50 p-1.5 rounded-xl flex gap-1 mb-6 backdrop-blur-sm">
+              <button
+                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${mode === "login" ? "bg-white shadow-soft text-emerald-700" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}
+                type="button"
+                onClick={() => setMode("login")}
+              >
+                Login
               </button>
-              {locationStatus ? <p className="text-xs text-gray-600">{locationStatus}</p> : null}
+              <button
+                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${mode === "register" ? "bg-white shadow-soft text-emerald-700" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}
+                type="button"
+                onClick={() => setMode("register")}
+              >
+                Create Account
+              </button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-2">
+            <form className="space-y-4" onSubmit={submit}>
+              <AnimatePresence mode="popLayout">
+                {mode === "register" && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="relative"
+                  >
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      className="input-box pl-10"
+                      placeholder="Full Name"
+                      value={form.name}
+                      onChange={(e) => onChange("name", e.target.value)}
+                      required
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  className="input-box"
-                  placeholder="Latitude"
-                  value={form.latitude}
-                  onChange={(e) => onChange("latitude", e.target.value)}
-                  required
-                />
-                <input
-                  className="input-box"
-                  placeholder="Longitude"
-                  value={form.longitude}
-                  onChange={(e) => onChange("longitude", e.target.value)}
+                  className="input-box pl-10"
+                  placeholder="Email address"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => onChange("email", e.target.value)}
                   required
                 />
               </div>
-            </>
-          )}
 
-          {error ? <p className="rounded-soft bg-red-100 p-2 text-sm text-red-700">{error}</p> : null}
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  className="input-box pl-10"
+                  placeholder="Password"
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => onChange("password", e.target.value)}
+                  required
+                />
+              </div>
 
-          <button className="btn-main" disabled={loading}>
-            {loading ? "Please wait..." : mode === "register" ? "Create Account" : "Login"}
-          </button>
-        </form>
-      </section>
+              <AnimatePresence mode="popLayout">
+                {mode === "register" && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3"
+                  >
+                    <button 
+                      type="button" 
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-semibold hover:bg-emerald-100 transition-colors"
+                      onClick={useCurrentLocation}
+                    >
+                      <MapPin className="w-4 h-4" />
+                      Use My Current Location
+                    </button>
+                    {locationStatus && (
+                      <p className="text-xs text-center font-medium text-emerald-600">{locationStatus}</p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        className="input-box text-sm"
+                        placeholder="Latitude"
+                        value={form.latitude}
+                        onChange={(e) => onChange("latitude", e.target.value)}
+                        required
+                      />
+                      <input
+                        className="input-box text-sm"
+                        placeholder="Longitude"
+                        value={form.longitude}
+                        onChange={(e) => onChange("longitude", e.target.value)}
+                        required
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {error && (
+                  <motion.p 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100 flex items-center gap-2 mt-2"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              <button className="btn-main mt-6" disabled={loading}>
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  mode === "register" ? "Create Account" : "Sign In"
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      </motion.div>
     </main>
   );
 }
