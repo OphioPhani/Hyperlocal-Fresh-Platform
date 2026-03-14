@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Trebuchet MS", "Verdana", sans-serif;
+  color: #1f2937;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #fff5d5, #eaf7ea 48%, #d8ecff);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  letter-spacing: 0.01em;
+}
+
+@layer components {
+  .app-shell {
+    @apply mx-auto w-full max-w-xl px-4 pb-10 pt-4;
+  }
+
+  .card {
+    @apply rounded-soft bg-white/90 p-4 shadow-panel backdrop-blur;
+  }
+
+  .btn-main {
+    @apply w-full rounded-soft bg-leaf px-4 py-3 text-lg font-bold text-white transition active:scale-95;
+  }
+
+  .btn-alt {
+    @apply w-full rounded-soft bg-soil px-4 py-3 text-lg font-bold text-white transition active:scale-95;
+  }
+
+  .btn-light {
+    @apply w-full rounded-soft border-2 border-leaf bg-white px-4 py-3 text-lg font-bold text-leaf transition active:scale-95;
+  }
+
+  .input-box {
+    @apply w-full rounded-soft border border-gray-300 px-4 py-3 text-base;
+  }
+}
