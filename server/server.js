@@ -13,6 +13,16 @@ const { haversineKm } = require("./utils/distance");
 dotenv.config();
 
 const app = express();
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "https://aarna-seven.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+}));
+
+app.use(express.json());
+
 const PORT = Number(process.env.PORT || 4000);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const DB_PATH = process.env.DB_PATH
