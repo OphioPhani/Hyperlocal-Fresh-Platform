@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "Backend for Hyperlocal Fresh Produce Supply & Waste Reduction Platform",
   "main": "server.js",
+  
   "scripts": {
     "dev": "node server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "postinstall": "npm rebuild sqlite3 --build-from-source"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
