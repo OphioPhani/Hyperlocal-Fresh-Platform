@@ -1,11 +1,23 @@
 // Always use same-origin API so Vercel can proxy requests consistently.
 const API_BASE = "/api";
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function pingHealth() {
   try {
-    const res = await fetch(`${API_BASE}/health`, {
-      signal: AbortSignal.timeout(8000)
-    });
+    const res = await fetchWithTimeout(`${API_BASE}/health`, {}, 8000);
     return res.ok;
   } catch {
     return false;
@@ -23,11 +35,11 @@ export async function apiRequest(path, { method = "GET", body, token } = {}, _re
 
   let response;
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    response = await fetchWithTimeout(`${API_BASE}${path}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined
-    });
+    }, 12000);
   } catch {
     if (_retries > 0) {
       await new Promise(r => setTimeout(r, 8000));
