@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
   color: #0f172a;
@@ -21,6 +21,10 @@ body {
   background-attachment: fixed;
 }
 
+#root {
+  min-height: 100vh;
+}
+
 h1, h2, h3, h4 {
   letter-spacing: -0.02em;
 }
@@ -35,7 +39,7 @@ h1, h2, h3, h4 {
   }
 
   .card-hover {
-    @apply transition-all duration-300 hover:shadow-panel hover:-translate-y-1 hover:bg-white/90 cursor-pointer;
+    @apply transition-all duration-300 hover:shadow-panel hover:-translate-y-1.5 hover:bg-white/95 cursor-pointer;
   }
 
   .btn-main {
@@ -56,5 +60,21 @@ h1, h2, h3, h4 {
   .input-box {
     @apply w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 text-base text-slate-800 transition-all 
            focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 placeholder:text-slate-400;
+  }
+
+  .icon-btn {
+    @apply inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white/85 text-slate-600 transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-soft active:scale-95;
+  }
+
+  .dropdown-panel {
+    @apply absolute right-0 top-full mt-2 w-64 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-panel backdrop-blur-xl;
+  }
+
+  .section-title {
+    @apply text-xl font-extrabold text-slate-800 flex items-center gap-2 px-2;
+  }
+
+  .surface-soft {
+    @apply rounded-2xl border border-slate-200 bg-white/70 shadow-soft backdrop-blur;
   }
 }

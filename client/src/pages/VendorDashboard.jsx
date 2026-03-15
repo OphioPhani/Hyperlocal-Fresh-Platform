@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, RefreshCw, Store, Tag, Archive, Trash2, Clock, AlertCircle, Package } from "lucide-react";
+import { LogOut, RefreshCw, Store, Tag, Archive, Trash2, Clock, AlertCircle, Package, Menu, UserCircle2, Loader2, Settings } from "lucide-react";
 import StockForm from "../components/StockForm";
 import { useAuth } from "../hooks/useAuth";
 import { apiRequest } from "../lib/api";
@@ -13,6 +13,10 @@ export default function VendorDashboard() {
   const [stock, setStock] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [actionBusy, setActionBusy] = useState("");
+  const menusRef = useRef(null);
 
   const fetchStock = async () => {
     setLoading(true);
@@ -31,19 +35,53 @@ export default function VendorDashboard() {
     fetchStock();
   }, []);
 
+  useEffect(() => {
+    if (!menuOpen && !profileOpen) {
+      return undefined;
+    }
+
+    const handleClickOutside = (event) => {
+      if (menusRef.current && !menusRef.current.contains(event.target)) {
+        setMenuOpen(false);
+        setProfileOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen, profileOpen]);
+
   const deactivateStock = async (id) => {
+    setActionBusy(`${id}:delete`);
+    setError("");
     try {
       await apiRequest(`/stock/${id}`, {
         method: "DELETE",
         token
       });
-      fetchStock();
+      await fetchStock();
     } catch (requestError) {
       setError(requestError.message);
+    } finally {
+      setActionBusy("");
     }
   };
 
   const setSurplusAction = async (item, surplusAction, discountPercent = 0) => {
+    setActionBusy(`${item.id}:${surplusAction}`);
+    setError("");
     try {
       await apiRequest(`/stock/${item.id}`, {
         method: "PUT",
@@ -58,9 +96,11 @@ export default function VendorDashboard() {
           discountPercent
         }
       });
-      fetchStock();
+      await fetchStock();
     } catch (requestError) {
       setError(requestError.message);
+    } finally {
+      setActionBusy("");
     }
   };
 
@@ -75,7 +115,7 @@ export default function VendorDashboard() {
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="card mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sticky top-4 z-40 bg-white/80"
+        className="card mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sticky top-4 z-40 bg-white/85 relative"
       >
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center border border-emerald-200 shadow-sm">
@@ -87,20 +127,81 @@ export default function VendorDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="relative flex items-center gap-2 w-full sm:w-auto" ref={menusRef}>
           <button className="btn-light flex-1 sm:flex-none !py-2 !px-4 !text-sm" onClick={fetchStock}>
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-          <button className="btn-light !py-2 !px-4 !text-sm text-red-600 hover:bg-red-50 hover:border-red-200" onClick={handleLogout}>
-            <LogOut className="w-4 h-4" />
-            Logout
+
+          <button
+            className="icon-btn"
+            type="button"
+            aria-label="Open menu"
+            onClick={() => {
+              setMenuOpen((prev) => !prev);
+              setProfileOpen(false);
+            }}
+          >
+            <Menu className="w-5 h-5" />
           </button>
+
+          <button
+            className="icon-btn"
+            type="button"
+            aria-label="Open profile"
+            onClick={() => {
+              setProfileOpen((prev) => !prev);
+              setMenuOpen(false);
+            }}
+          >
+            <UserCircle2 className="w-5 h-5" />
+          </button>
+
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                className="dropdown-panel z-50"
+              >
+                <p className="px-2 pb-2 text-xs font-bold uppercase tracking-widest text-slate-400">Quick menu</p>
+                <a href="#stock-form" className="btn-light !w-full !justify-start !rounded-xl !px-3 !py-2 !text-sm !font-semibold !bg-slate-50 !border-slate-200 hover:!bg-slate-100">Add stock</a>
+                <a href="#stock-section" className="btn-light !mt-2 !w-full !justify-start !rounded-xl !px-3 !py-2 !text-sm !font-semibold !bg-slate-50 !border-slate-200 hover:!bg-slate-100">Manage stock</a>
+                <button type="button" className="btn-light !mt-2 !w-full !justify-start !rounded-xl !px-3 !py-2 !text-sm !font-semibold !bg-slate-50 !border-slate-200 hover:!bg-slate-100" onClick={fetchStock}>
+                  <Settings className="w-4 h-4" />
+                  Reload data
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {profileOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                className="dropdown-panel z-50"
+              >
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
+                  <p className="text-sm font-bold text-slate-800">{user?.name || "Vendor"}</p>
+                  <p className="text-xs font-medium text-slate-500">{user?.email || ""}</p>
+                  <p className="mt-1 inline-flex rounded-md bg-white px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700 border border-emerald-200">Vendor account</p>
+                </div>
+                <button type="button" className="btn-light !mt-3 !w-full !justify-start !rounded-xl !px-3 !py-2 !text-sm !font-semibold !text-red-600 !border-red-200 !bg-red-50 hover:!bg-red-100" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.header>
 
       {/* Main Content Form */}
       <motion.div
+        id="stock-form"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
@@ -110,13 +211,14 @@ export default function VendorDashboard() {
 
       {/* Stock List Section */}
       <motion.section 
+        id="stock-section"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
         className="mt-8 space-y-4"
       >
         <div className="flex items-center justify-between px-2">
-          <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+          <h2 className="section-title !px-0">
             <Package className="w-5 h-5 text-emerald-600" />
             My Active Stock
           </h2>
@@ -192,31 +294,39 @@ export default function VendorDashboard() {
 
                   <div className="pt-4 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <button 
-                      className="btn-light !py-2 !px-3 !text-xs !bg-slate-50 hover:!bg-amber-50 hover:!text-amber-700 hover:!border-amber-200 group" 
+                      type="button"
+                      disabled={actionBusy.startsWith(`${item.id}:`)}
+                      className="btn-light !py-2 !px-3 !text-xs !bg-slate-50 hover:!bg-amber-50 hover:!text-amber-700 hover:!border-amber-200 group disabled:opacity-60" 
                       onClick={() => setSurplusAction(item, "discount", 20)}
                     >
-                      <Tag className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                      20% Off
+                      {actionBusy === `${item.id}:discount` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Tag className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />}
+                      20% Discount
                     </button>
                     <button 
-                      className="btn-light !py-2 !px-3 !text-xs !bg-slate-50 hover:!bg-blue-50 hover:!text-blue-700 hover:!border-blue-200 group" 
+                      type="button"
+                      disabled={actionBusy.startsWith(`${item.id}:`)}
+                      className="btn-light !py-2 !px-3 !text-xs !bg-slate-50 hover:!bg-blue-50 hover:!text-blue-700 hover:!border-blue-200 group disabled:opacity-60" 
                       onClick={() => setSurplusAction(item, "storage", 0)}
                     >
-                      <Archive className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                      Store
+                      {actionBusy === `${item.id}:storage` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />}
+                      Store Surplus
                     </button>
                     <button 
-                      className="btn-light !py-2 !px-3 !text-xs !bg-slate-50 hover:!bg-slate-100 group" 
+                      type="button"
+                      disabled={actionBusy.startsWith(`${item.id}:`)}
+                      className="btn-light !py-2 !px-3 !text-xs !bg-slate-50 hover:!bg-slate-100 group disabled:opacity-60" 
                       onClick={() => setSurplusAction(item, "none", 0)}
                     >
-                      <RefreshCw className="w-3.5 h-3.5 group-hover:-rotate-180 transition-transform duration-500" />
-                      Normal
+                      {actionBusy === `${item.id}:none` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 group-hover:-rotate-180 transition-transform duration-500" />}
+                      Clear Surplus
                     </button>
                     <button 
-                      className="btn-light !py-2 !px-3 !text-xs !border-red-200 !bg-red-50 !text-red-700 hover:!bg-red-600 hover:!text-white group" 
+                      type="button"
+                      disabled={actionBusy.startsWith(`${item.id}:`)}
+                      className="btn-light !py-2 !px-3 !text-xs !border-red-200 !bg-red-50 !text-red-700 hover:!bg-red-600 hover:!text-white group disabled:opacity-60" 
                       onClick={() => deactivateStock(item.id)}
                     >
-                      <Trash2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      {actionBusy === `${item.id}:delete` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />}
                       Remove
                     </button>
                   </div>

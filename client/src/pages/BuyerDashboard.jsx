@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, RefreshCw, ShoppingBag, MapPin, Search, ShoppingCart, Clock, CheckCircle2, ChevronRight, AlertCircle, PackageSearch, Tag } from "lucide-react";
+import { LogOut, RefreshCw, ShoppingBag, MapPin, Search, ShoppingCart, Clock, CheckCircle2, AlertCircle, PackageSearch, Tag, Loader2, Menu, UserCircle2, Settings } from "lucide-react";
 import RequirementsForm from "../components/RequirementsForm";
 import { useAuth } from "../hooks/useAuth";
 import { apiRequest } from "../lib/api";
@@ -16,6 +16,10 @@ export default function BuyerDashboard() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [placingOrderId, setPlacingOrderId] = useState("");
+  const menusRef = useRef(null);
 
   const refreshData = async () => {
     setLoading(true);
@@ -44,7 +48,37 @@ export default function BuyerDashboard() {
     refreshData();
   }, []);
 
+  useEffect(() => {
+    if (!menuOpen && !profileOpen) {
+      return undefined;
+    }
+
+    const handleClickOutside = (event) => {
+      if (menusRef.current && !menusRef.current.contains(event.target)) {
+        setMenuOpen(false);
+        setProfileOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen, profileOpen]);
+
   const placeOrder = async (stockId, quantityKg, requestGroup) => {
+    setPlacingOrderId(`${stockId}:${requestGroup || "no-group"}`);
+    setError("");
     try {
       await apiRequest("/orders", {
         method: "POST",
@@ -54,9 +88,11 @@ export default function BuyerDashboard() {
           items: [{ stockId, quantityKg }]
         }
       });
-      refreshData();
+      await refreshData();
     } catch (requestError) {
       setError(requestError.message);
+    } finally {
+      setPlacingOrderId("");
     }
   };
 
@@ -71,7 +107,7 @@ export default function BuyerDashboard() {
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="card mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sticky top-4 z-40 bg-white/80"
+        className="card mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sticky top-4 z-40 bg-white/85 relative"
       >
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center border border-amber-200 shadow-sm">
@@ -83,20 +119,82 @@ export default function BuyerDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="relative flex items-center gap-2 w-full sm:w-auto" ref={menusRef}>
           <button className="btn-light flex-1 sm:flex-none !py-2 !px-4 !text-sm" onClick={refreshData}>
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-          <button className="btn-light !py-2 !px-4 !text-sm text-red-600 hover:bg-red-50 hover:border-red-200" onClick={handleLogout}>
-            <LogOut className="w-4 h-4" />
-            Logout
+
+          <button
+            className="icon-btn"
+            type="button"
+            aria-label="Open menu"
+            onClick={() => {
+              setMenuOpen((prev) => !prev);
+              setProfileOpen(false);
+            }}
+          >
+            <Menu className="w-5 h-5" />
           </button>
+
+          <button
+            className="icon-btn"
+            type="button"
+            aria-label="Open profile"
+            onClick={() => {
+              setProfileOpen((prev) => !prev);
+              setMenuOpen(false);
+            }}
+          >
+            <UserCircle2 className="w-5 h-5" />
+          </button>
+
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                className="dropdown-panel z-50"
+              >
+                <p className="px-2 pb-2 text-xs font-bold uppercase tracking-widest text-slate-400">Quick menu</p>
+                <a href="#buyer-form" className="btn-light !w-full !justify-start !rounded-xl !px-3 !py-2 !text-sm !font-semibold !bg-slate-50 !border-slate-200 hover:!bg-slate-100">Post requirement</a>
+                <a href="#smart-matches" className="btn-light !mt-2 !w-full !justify-start !rounded-xl !px-3 !py-2 !text-sm !font-semibold !bg-slate-50 !border-slate-200 hover:!bg-slate-100">Smart matches</a>
+                <a href="#my-orders" className="btn-light !mt-2 !w-full !justify-start !rounded-xl !px-3 !py-2 !text-sm !font-semibold !bg-slate-50 !border-slate-200 hover:!bg-slate-100">My orders</a>
+                <button type="button" className="btn-light !mt-2 !w-full !justify-start !rounded-xl !px-3 !py-2 !text-sm !font-semibold !bg-slate-50 !border-slate-200 hover:!bg-slate-100" onClick={refreshData}>
+                  <Settings className="w-4 h-4" />
+                  Reload data
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {profileOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                className="dropdown-panel z-50"
+              >
+                <div className="rounded-xl border border-amber-100 bg-amber-50/70 p-3">
+                  <p className="text-sm font-bold text-slate-800">{user?.name || "Buyer"}</p>
+                  <p className="text-xs font-medium text-slate-500">{user?.email || ""}</p>
+                  <p className="mt-1 inline-flex rounded-md bg-white px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700 border border-amber-200">Buyer account</p>
+                </div>
+                <button type="button" className="btn-light !mt-3 !w-full !justify-start !rounded-xl !px-3 !py-2 !text-sm !font-semibold !text-red-600 !border-red-200 !bg-red-50 hover:!bg-red-100" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.header>
 
       {/* Main Content Form */}
       <motion.div
+        id="buyer-form"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
@@ -113,10 +211,11 @@ export default function BuyerDashboard() {
 
       {/* Smart Matches Section */}
       <motion.section 
+        id="smart-matches"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
         className="mt-8 space-y-4"
       >
-        <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2 px-2">
+        <h2 className="section-title">
           <CheckCircle2 className="w-5 h-5 text-emerald-600" />
           Smart Matches
         </h2>
@@ -161,7 +260,7 @@ export default function BuyerDashboard() {
                     {match.options.map((option) => {
                       const orderQty = Math.min(Number(match.quantityKg), Number(option.quantityKg));
                       return (
-                        <div key={`${match.requirementId}-${option.stockId}`} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div key={`${match.requirementId}-${option.stockId}`} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-panel hover:-translate-y-0.5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
                               <p className="text-base font-bold text-slate-800">{option.vendorName}</p>
@@ -176,17 +275,27 @@ export default function BuyerDashboard() {
                               <span>Available: <strong>{option.quantityKg} kg</strong></span>
                               {option.surplusAction !== "none" && (
                                 <span className="text-amber-600 bg-amber-50 px-2 py-0.5 border border-amber-200 rounded-md">
-                                  Surplus: {option.surplusAction}
+                                  Surplus: {option.surplusAction === "discount" ? `${option.discountPercent}% discount` : "stored"}
                                 </span>
                               )}
                             </div>
                           </div>
                           <button
-                            className="btn-main sm:w-auto !py-2.5 !px-5 whitespace-nowrap shadow-md text-sm"
+                            disabled={placingOrderId === `${option.stockId}:${match.requestGroup || "no-group"}`}
+                            className="btn-main sm:w-auto !py-2.5 !px-5 whitespace-nowrap shadow-md text-sm disabled:opacity-70"
                             onClick={() => placeOrder(option.stockId, orderQty, match.requestGroup)}
                           >
-                            <ShoppingCart className="w-4 h-4" />
-                            Order {orderQty} kg
+                            {placingOrderId === `${option.stockId}:${match.requestGroup || "no-group"}` ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Ordering...
+                              </>
+                            ) : (
+                              <>
+                                <ShoppingCart className="w-4 h-4" />
+                                Order {orderQty} kg
+                              </>
+                            )}
                           </button>
                         </div>
                       );
@@ -203,7 +312,7 @@ export default function BuyerDashboard() {
       <div className="grid md:grid-cols-2 gap-6 mt-8">
         
         {/* Orders Section */}
-        <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="space-y-4">
+        <motion.section id="my-orders" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="space-y-4">
           <h2 className="text-lg font-extrabold text-slate-800 flex items-center gap-2 px-2">
             <PackageSearch className="w-5 h-5 text-emerald-600" />
             My Orders
@@ -241,7 +350,7 @@ export default function BuyerDashboard() {
         </motion.section>
 
         {/* Nearby Network Stock */}
-        <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="space-y-4">
+        <motion.section id="live-network" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="space-y-4">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-emerald-600" />
