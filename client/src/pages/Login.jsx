@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
-import { apiRequest } from "../lib/api";
+import { apiRequest, pingHealth } from "../lib/api";
 import { Store, ShoppingBag, MapPin, Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
 
 export default function Login() {
@@ -25,6 +25,36 @@ export default function Login() {
   const [locationStatus, setLocationStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // null = checking, true = ready, false = waking up
+  const [serverReady, setServerReady] = useState(null);
+  const retryTimerRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkServer() {
+      const ok = await pingHealth();
+      if (cancelled) return;
+      if (ok) {
+        setServerReady(true);
+      } else {
+        setServerReady(false);
+        retryTimerRef.current = setInterval(async () => {
+          const again = await pingHealth();
+          if (!cancelled && again) {
+            setServerReady(true);
+            clearInterval(retryTimerRef.current);
+          }
+        }, 7000);
+      }
+    }
+
+    checkServer();
+    return () => {
+      cancelled = true;
+      clearInterval(retryTimerRef.current);
+    };
+  }, []);
 
   const title = useMemo(() => {
     if (mode === "register") {
@@ -235,8 +265,35 @@ export default function Login() {
               </AnimatePresence>
 
               <AnimatePresence>
+                {serverReady === false && (
+                  <motion.div
+                    key="waking"
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="rounded-lg bg-amber-50 p-3 text-sm text-amber-700 border border-amber-100 flex items-center gap-2"
+                  >
+                    <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+                    Backend is starting up — this takes ~30 seconds. Retrying automatically...
+                  </motion.div>
+                )}
+                {serverReady === null && (
+                  <motion.p
+                    key="checking"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-xs text-center text-slate-400 flex items-center justify-center gap-1.5"
+                  >
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Connecting to server...
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
                 {error && (
-                  <motion.p 
+                  <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
@@ -248,7 +305,7 @@ export default function Login() {
                 )}
               </AnimatePresence>
 
-              <button className="btn-main mt-6" disabled={loading}>
+              <button className="btn-main mt-6" disabled={loading || serverReady === false}>
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (

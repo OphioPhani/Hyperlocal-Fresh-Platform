@@ -1,6 +1,17 @@
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
-export async function apiRequest(path, { method = "GET", body, token } = {}) {
+export async function pingHealth() {
+  try {
+    const res = await fetch(`${API_BASE}/health`, {
+      signal: AbortSignal.timeout(8000)
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function apiRequest(path, { method = "GET", body, token } = {}, _retries = 1) {
   const headers = {
     "Content-Type": "application/json"
   };
@@ -17,7 +28,11 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
       body: body ? JSON.stringify(body) : undefined
     });
   } catch {
-    throw new Error("Server is unreachable — it may be starting up. Please wait a few seconds and try again.");
+    if (_retries > 0) {
+      await new Promise(r => setTimeout(r, 8000));
+      return apiRequest(path, { method, body, token }, _retries - 1);
+    }
+    throw new Error("Server is unreachable — it may still be starting up. Please try again in a moment.");
   }
 
   const data = await response.json().catch(() => ({}));
