@@ -14,24 +14,16 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || origin.startsWith("https://aarna-seven.vercel.app")) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true
-}));
-
-app.use(express.json());
-
 const PORT = Number(process.env.PORT || 4000);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const DB_PATH = process.env.DB_PATH
   ? path.resolve(__dirname, process.env.DB_PATH)
   : path.resolve(__dirname, "..", "database", "app.db");
+
+const PROD_ALLOWED_ORIGINS = [
+  FRONTEND_URL,
+  "https://aarna-seven.vercel.app"
+].filter(Boolean);
 
 let db;
 
@@ -73,28 +65,27 @@ async function initDatabase() {
   console.log(`SQLite database ready at ${DB_PATH}`);
 }
 
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-
-      if (process.env.NODE_ENV !== "production") {
-        callback(null, true);
-        return;
-      }
-
-      if (origin === FRONTEND_URL) {
-        callback(null, true);
-        return;
-      }
-
-      callback(new Error("CORS blocked for this origin"));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) {
+      callback(null, true);
+      return;
     }
-  })
-);
+
+    if (process.env.NODE_ENV !== "production") {
+      callback(null, true);
+      return;
+    }
+
+    if (PROD_ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("CORS blocked for this origin"));
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 app.get("/api/health", (req, res) => {
