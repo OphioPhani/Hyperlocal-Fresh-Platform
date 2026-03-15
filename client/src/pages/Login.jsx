@@ -25,8 +25,8 @@ export default function Login() {
   const [locationStatus, setLocationStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // null = checking, true = ready, false = waking up
-  const [serverReady, setServerReady] = useState(null);
+  // checking | warming | ready | down
+  const [serverStatus, setServerStatus] = useState("checking");
   const retryTimerRef = useRef(null);
 
   useEffect(() => {
@@ -36,13 +36,21 @@ export default function Login() {
       const ok = await pingHealth();
       if (cancelled) return;
       if (ok) {
-        setServerReady(true);
+        setServerStatus("ready");
       } else {
-        setServerReady(false);
+        setServerStatus("warming");
+        let attempts = 0;
         retryTimerRef.current = setInterval(async () => {
           const again = await pingHealth();
           if (!cancelled && again) {
-            setServerReady(true);
+            setServerStatus("ready");
+            clearInterval(retryTimerRef.current);
+            return;
+          }
+
+          attempts += 1;
+          if (!cancelled && attempts >= 6) {
+            setServerStatus("down");
             clearInterval(retryTimerRef.current);
           }
         }, 7000);
@@ -265,7 +273,7 @@ export default function Login() {
               </AnimatePresence>
 
               <AnimatePresence>
-                {serverReady === false && (
+                {serverStatus === "warming" && (
                   <motion.div
                     key="waking"
                     initial={{ opacity: 0, y: -8 }}
@@ -277,7 +285,7 @@ export default function Login() {
                     Backend is starting up — this takes ~30 seconds. Retrying automatically...
                   </motion.div>
                 )}
-                {serverReady === null && (
+                {serverStatus === "checking" && (
                   <motion.p
                     key="checking"
                     initial={{ opacity: 0 }}
@@ -288,6 +296,17 @@ export default function Login() {
                     <Loader2 className="w-3 h-3 animate-spin" />
                     Connecting to server...
                   </motion.p>
+                )}
+                {serverStatus === "down" && (
+                  <motion.div
+                    key="down"
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100"
+                  >
+                    Backend is still unreachable. This is likely a deployment env issue (BACKEND_URL) or backend downtime.
+                  </motion.div>
                 )}
               </AnimatePresence>
 
