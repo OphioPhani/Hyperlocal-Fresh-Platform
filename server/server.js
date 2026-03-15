@@ -16,13 +16,18 @@ const app = express();
 
 const PORT = Number(process.env.PORT || 4000);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const EXTRA_ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
 const DB_PATH = process.env.DB_PATH
   ? path.resolve(__dirname, process.env.DB_PATH)
   : path.resolve(__dirname, "..", "database", "app.db");
 
 const PROD_ALLOWED_ORIGINS = [
   FRONTEND_URL,
-  "https://aarna-seven.vercel.app"
+  "https://aarna-seven.vercel.app",
+  ...EXTRA_ALLOWED_ORIGINS
 ].filter(Boolean);
 
 let db;
@@ -52,6 +57,25 @@ function normalizeText(value) {
     .toLowerCase();
 }
 
+function isAllowedProductionOrigin(origin) {
+  if (!origin) {
+    return true;
+  }
+
+  if (PROD_ALLOWED_ORIGINS.includes(origin)) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(origin);
+    const isVercelApp = parsed.protocol === "https:" && parsed.hostname.endsWith(".vercel.app");
+    const isLocalhost = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+    return isVercelApp || isLocalhost;
+  } catch {
+    return false;
+  }
+}
+
 async function initDatabase() {
   const schemaPath = path.resolve(__dirname, "..", "database", "schema.sql");
   const schemaSql = fs.readFileSync(schemaPath, "utf8");
@@ -77,7 +101,7 @@ app.use(cors({
       return;
     }
 
-    if (PROD_ALLOWED_ORIGINS.includes(origin)) {
+    if (isAllowedProductionOrigin(origin)) {
       callback(null, true);
       return;
     }

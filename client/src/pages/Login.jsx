@@ -305,7 +305,7 @@ export default function Login() {
                 )}
               </AnimatePresence>
 
-              <button className="btn-main mt-6" disabled={loading || serverReady === false}>
+              <button className="btn-main mt-6" disabled={loading}>
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
