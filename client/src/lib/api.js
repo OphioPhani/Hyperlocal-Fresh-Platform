@@ -1,5 +1,5 @@
-// Always use same-origin API so Vercel can proxy requests consistently.
-const API_BASE = "/api";
+// Prefer explicit env backend URL when provided; otherwise use same-origin /api.
+const API_BASE = String(import.meta.env.VITE_API_URL || "").trim() || "/api";
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
